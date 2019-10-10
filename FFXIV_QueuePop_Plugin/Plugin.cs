@@ -1,16 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
 using System.Text;
 using System.Windows.Forms;
 using Advanced_Combat_Tracker;
 using System.IO;
-using System.Reflection;
 using System.Xml;
 using FFXIV_QueuePop_Plugin.Notifier;
 using FFXIV_QueuePop_Plugin.Logger;
+using Q42.HueApi.Interfaces;
+using Q42.HueApi;
+using Q42.HueApi.Models.Bridge;
+using System.Linq;
+using System.Drawing;
+using System.Threading;
+using Q42.HueApi.Converters;
+using Q42.HueApi.ColorConverters;
+using Q42.HueApi.ColorConverters.Original;
+using FFXIV_QueuePop_Plugin.Hue;
 
 namespace FFXIV_QueuePop_Plugin
 {
@@ -55,7 +61,14 @@ namespace FFXIV_QueuePop_Plugin
             this.label2 = new System.Windows.Forms.Label();
             this.lbTextKey = new System.Windows.Forms.Label();
             this.txtTelegramChatId = new System.Windows.Forms.TextBox();
+            this.btnRegisterHue = new System.Windows.Forms.Button();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.cmbLightSelector = new System.Windows.Forms.ComboBox();
+            this.lblHueStatus = new System.Windows.Forms.Label();
+            this.txtHueInfo = new System.Windows.Forms.TextBox();
             this.gbSettings.SuspendLayout();
+            this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
             // gbSettings
@@ -167,15 +180,76 @@ namespace FFXIV_QueuePop_Plugin
             this.txtTelegramChatId.Size = new System.Drawing.Size(195, 20);
             this.txtTelegramChatId.TabIndex = 3;
             // 
+            // btnRegisterHue
+            // 
+            this.btnRegisterHue.Location = new System.Drawing.Point(6, 163);
+            this.btnRegisterHue.Name = "btnRegisterHue";
+            this.btnRegisterHue.Size = new System.Drawing.Size(78, 23);
+            this.btnRegisterHue.TabIndex = 9;
+            this.btnRegisterHue.Text = "Register";
+            this.btnRegisterHue.UseVisualStyleBackColor = true;
+            this.btnRegisterHue.Click += new System.EventHandler(this.btnRegisterHue_Click);
+            // 
+            // groupBox1
+            // 
+            this.groupBox1.Controls.Add(this.label1);
+            this.groupBox1.Controls.Add(this.cmbLightSelector);
+            this.groupBox1.Controls.Add(this.lblHueStatus);
+            this.groupBox1.Controls.Add(this.txtHueInfo);
+            this.groupBox1.Controls.Add(this.btnRegisterHue);
+            this.groupBox1.Location = new System.Drawing.Point(320, 3);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(363, 192);
+            this.groupBox1.TabIndex = 10;
+            this.groupBox1.TabStop = false;
+            this.groupBox1.Text = "Philips Hue";
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(6, 27);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(30, 13);
+            this.label1.TabIndex = 14;
+            this.label1.Text = "Light";
+            // 
+            // cmbLightSelector
+            // 
+            this.cmbLightSelector.FormattingEnabled = true;
+            this.cmbLightSelector.Location = new System.Drawing.Point(42, 24);
+            this.cmbLightSelector.Name = "cmbLightSelector";
+            this.cmbLightSelector.Size = new System.Drawing.Size(121, 21);
+            this.cmbLightSelector.TabIndex = 13;
+            this.cmbLightSelector.SelectedIndexChanged += new System.EventHandler(this.cmbLightSelector_SelectedIndexChanged);
+            // 
+            // lblHueStatus
+            // 
+            this.lblHueStatus.AutoSize = true;
+            this.lblHueStatus.Location = new System.Drawing.Point(99, 137);
+            this.lblHueStatus.Name = "lblHueStatus";
+            this.lblHueStatus.Size = new System.Drawing.Size(54, 13);
+            this.lblHueStatus.TabIndex = 12;
+            this.lblHueStatus.Text = "Not found";
+            // 
+            // txtHueInfo
+            // 
+            this.txtHueInfo.Location = new System.Drawing.Point(99, 166);
+            this.txtHueInfo.Name = "txtHueInfo";
+            this.txtHueInfo.Size = new System.Drawing.Size(244, 20);
+            this.txtHueInfo.TabIndex = 11;
+            // 
             // Plugin
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.gbSettings);
             this.Name = "Plugin";
             this.Size = new System.Drawing.Size(686, 384);
             this.gbSettings.ResumeLayout(false);
             this.gbSettings.PerformLayout();
+            this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -202,7 +276,13 @@ namespace FFXIV_QueuePop_Plugin
         private ComboBox cbMode;
         private TextBox txtGetURL;
         private Label lblTextGetUrl;
+        private Button btnRegisterHue;
+        private GroupBox groupBox1;
+        private TextBox txtHueInfo;
         QueueWatcher notifier;
+        private Label lblHueStatus;
+        private ComboBox cmbLightSelector;
+        private Label label1;
 
         #region IActPluginV1 Members
         public void InitPlugin(TabPage pluginScreenSpace, Label pluginStatusText)
@@ -211,9 +291,7 @@ namespace FFXIV_QueuePop_Plugin
             pluginScreenSpace.Controls.Add(this);   
             this.Dock = DockStyle.Fill; 
             xmlSettings = new SettingsSerializer(this);
-            LoadSettings();
-
-          
+            LoadSettings();          
 
             lblStatus.Text = "Plugin Started";
 
@@ -222,7 +300,13 @@ namespace FFXIV_QueuePop_Plugin
             notifier = new QueueWatcher();
 
             notifier.Start();
+
+            if (!String.IsNullOrEmpty(txtHueInfo.Text))
+            {
+                InitHue(txtHueInfo.Text);
+            }
         }
+
         public void DeInitPlugin()
         {
             //Stopping the QueuePopNotifier thread
@@ -245,6 +329,8 @@ namespace FFXIV_QueuePop_Plugin
             xmlSettings.AddControlSetting(txtTelegramChatId.Name, txtTelegramChatId);
             xmlSettings.AddControlSetting(cbMode.Name, cbMode);
             xmlSettings.AddControlSetting(txtGetURL.Name, txtGetURL);
+            xmlSettings.AddControlSetting(txtHueInfo.Name, txtHueInfo);
+            xmlSettings.AddControlSetting(cmbLightSelector.Name, cmbLightSelector);
 
             if (File.Exists(settingsFile))
             {
@@ -294,9 +380,50 @@ namespace FFXIV_QueuePop_Plugin
             SaveSettings();
         }
 
+        private async void InitHue(string appkey)
+        {
+            //Gaat er nu vanuit dat textbox gevuld is
+            bool bridgeInitialized = await Qhue.Instance.InitBridgeAsync(appkey);
+
+            if (bridgeInitialized)
+            {
+                lblHueStatus.Text = "Bridge found";
+            }
+
+            Dictionary<string, string> dict = await Qhue.Instance.getLightsAsync();
+
+            cmbLightSelector.DisplayMember = "Key";
+            cmbLightSelector.ValueMember = "Value";
+            cmbLightSelector.DataSource = dict.ToList();
+            Qhue.Instance.prefferedLight = cmbLightSelector.SelectedValue.ToString();
+            LoadSettings();
+        }
+
         private void BtnTest_Click(object sender, EventArgs e)
         {
             _ = NotificationSender.SendNotification();
+
+            Qhue.Instance.SetLight(cmbLightSelector.SelectedValue.ToString());
+        }
+
+        private async void btnRegisterHue_Click(object sender, EventArgs e)
+        {
+            string appKey = await Qhue.Instance.RegisterBridgeAsync();
+            if (appKey != null)
+            {
+                txtHueInfo.Text = "Register succesfull";
+                InitHue(appKey);
+            }
+            else
+            {
+                lblHueStatus.Text = "Bridge registration failed. Make sure it is connected to the network";
+            }
+         
+        }
+
+        private void cmbLightSelector_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            Qhue.Instance.prefferedLight = cmbLightSelector.SelectedValue.ToString();
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Advanced_Combat_Tracker;
+using FFXIV_QueuePop_Plugin.Hue;
 using FFXIV_QueuePop_Plugin.Logger;
 using FFXIV_QueuePop_Plugin.Notifier.Entity;
 using System;
@@ -20,6 +21,7 @@ namespace FFXIV_QueuePop_Plugin.Notifier
         {
             try
             {
+                Qhue.Instance.SetLight();
                 NotificationSettings settings = NotificationSettingsHelper.GetSettings();
                 //Default is set to telegram for now
                 switch (settings.NotificationMode)
