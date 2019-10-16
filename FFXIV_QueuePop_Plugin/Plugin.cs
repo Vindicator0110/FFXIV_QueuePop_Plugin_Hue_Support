@@ -67,12 +67,14 @@ namespace FFXIV_QueuePop_Plugin
             this.cmbLightSelector = new System.Windows.Forms.ComboBox();
             this.lblHueStatus = new System.Windows.Forms.Label();
             this.txtHueInfo = new System.Windows.Forms.TextBox();
+            this.btnSecondTest = new System.Windows.Forms.Button();
             this.gbSettings.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
             // gbSettings
             // 
+            this.gbSettings.Controls.Add(this.btnSecondTest);
             this.gbSettings.Controls.Add(this.txtGetURL);
             this.gbSettings.Controls.Add(this.lblTextGetUrl);
             this.gbSettings.Controls.Add(this.lbTextMode);
@@ -238,6 +240,16 @@ namespace FFXIV_QueuePop_Plugin
             this.txtHueInfo.Size = new System.Drawing.Size(244, 20);
             this.txtHueInfo.TabIndex = 11;
             // 
+            // btnSecondTest
+            // 
+            this.btnSecondTest.Location = new System.Drawing.Point(140, 157);
+            this.btnSecondTest.Name = "btnSecondTest";
+            this.btnSecondTest.Size = new System.Drawing.Size(78, 23);
+            this.btnSecondTest.TabIndex = 9;
+            this.btnSecondTest.Text = "Test 2";
+            this.btnSecondTest.UseVisualStyleBackColor = true;
+            this.btnSecondTest.Click += new System.EventHandler(this.btnSecondTest_Click);
+            // 
             // Plugin
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -282,6 +294,7 @@ namespace FFXIV_QueuePop_Plugin
         QueueWatcher notifier;
         private Label lblHueStatus;
         private ComboBox cmbLightSelector;
+        private Button btnSecondTest;
         private Label label1;
 
         #region IActPluginV1 Members
@@ -392,8 +405,8 @@ namespace FFXIV_QueuePop_Plugin
 
             Dictionary<string, string> dict = await Qhue.Instance.getLightsAsync();
 
-            cmbLightSelector.DisplayMember = "Key";
-            cmbLightSelector.ValueMember = "Value";
+            cmbLightSelector.ValueMember = "Key";
+            cmbLightSelector.DisplayMember = "Value";
             cmbLightSelector.DataSource = dict.ToList();
             Qhue.Instance.prefferedLight = cmbLightSelector.SelectedValue.ToString();
             LoadSettings();
@@ -403,7 +416,7 @@ namespace FFXIV_QueuePop_Plugin
         {
             _ = NotificationSender.SendNotification();
 
-            Qhue.Instance.SetLight(cmbLightSelector.SelectedValue.ToString());
+            Qhue.Instance.BlinkLightRed(cmbLightSelector.SelectedValue.ToString());
         }
 
         private async void btnRegisterHue_Click(object sender, EventArgs e)
@@ -424,6 +437,11 @@ namespace FFXIV_QueuePop_Plugin
         private void cmbLightSelector_SelectedIndexChanged(object sender, EventArgs e)
         {
             Qhue.Instance.prefferedLight = cmbLightSelector.SelectedValue.ToString();
+        }
+
+        private void btnSecondTest_Click(object sender, EventArgs e)
+        {
+            Qhue.Instance.CancelBlink();
         }
     }
 }

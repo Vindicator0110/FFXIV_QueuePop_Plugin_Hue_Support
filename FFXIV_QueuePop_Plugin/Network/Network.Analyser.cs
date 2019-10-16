@@ -1,4 +1,5 @@
 ﻿//ORIGINAL SOURCE: https://github.com/devunt/DFAssist
+using FFXIV_QueuePop_Plugin.Hue;
 using FFXIV_QueuePop_Plugin.Logger;
 using FFXIV_QueuePop_Plugin.Notifier;
 using System;
@@ -182,22 +183,32 @@ namespace FFXIV_QueuePop_Plugin
                             Log.Write(LogType.Info, "l-queue-started-general");
                         }
                     }
-                    else if (status == 3)
+                    else if (status == 3) // Queue Withdrawn or to late accepting?
                     {
-                        state = reason == 8 ? State.QUEUED : State.IDLE;
-                        Log.Write(LogType.Info, "l-queue-stopped");
+                        if(reason == 8)
+                        {
+                            state = State.QUEUED;
+                            Log.Write(LogType.Info, "l-queue-stopped Rentering queue");
+                            Qhue.Instance.CancelBlink();
+                        }
+                        else
+                        {
+                            Log.Write(LogType.Info, "l-queue-stopped dungeon finished");
+                            state = State.IDLE;
+                        }
                     }
-                    else if (status == 6)
+                    else if (status == 6) // Queue Accepted.
                     {
                         state = State.IDLE;
-
                         Log.Write(LogType.Info, "l-queue-entered");
+                        Qhue.Instance.CancelBlink();
+
                     }
-                    else if (status == 4)
+                    else if (status == 4) // Queue Popped, waiting to be accepted + sending notification.
                     {
                         var roulette = data[20];
                         var code = BitConverter.ToUInt16(data, 22);
-                        _ = NotificationSender.SendNotification();
+                        _ = NotificationSender.SendNotification(); 
                         Log.Write(LogType.Info, "l-queue-matched");
                     }
                 }
@@ -261,7 +272,7 @@ namespace FFXIV_QueuePop_Plugin
                     }
                     Log.Write(LogType.Info, "l-queue-updated");
                 }
-                else if (opcode == 0x0080)
+                else if (opcode == 0x0080) // Queue popped. Waiting for accept.
                 {
                     var roulette = data[2];
                     var code = BitConverter.ToUInt16(data, 4);
